@@ -166,7 +166,7 @@ namespace DataDumper
 			} else if (ft.FullName.Equals(typeof(bool).FullName)) {
 				var value = Convert.ToBoolean(reader.ReadU8());
 				Write(value);
-				return "\"" + value.ToString().ToLower() + "\"";
+				return value.ToString().ToLower();
 			} else if (ft.FullName.Equals(typeof(Single).FullName)) {
 				var value = reader.ReadF32();
 				Write(value);
