@@ -164,9 +164,9 @@ namespace DataDumper
 				Write(value);
 				return value.ToString();
 			} else if (ft.FullName.Equals(typeof(bool).FullName)) {
-				var value = reader.ReadU8();
+				var value = Convert.ToBoolean(reader.ReadU8());
 				Write(value);
-				return value.ToString();
+				return "\"" + value.ToString().ToLower() + "\"";
 			} else if (ft.FullName.Equals(typeof(Single).FullName)) {
 				var value = reader.ReadF32();
 				Write(value);
@@ -379,11 +379,15 @@ namespace DataDumper
 			if (name.EndsWith("RawNum"))
 				name = name.Substring(0, name.Length - "RawNum".Length);
 			
-			return name;
+			return name.ToPascalCase();
 		}
 		
 		private void WriteLine() {
 			WriteLine("", null);
+		}
+		
+		private void Write(bool b) {
+			Write(b.ToString(), null);
 		}
 		
 		private void Write(ulong u) {

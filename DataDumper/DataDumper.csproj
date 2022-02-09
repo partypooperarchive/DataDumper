@@ -54,6 +54,7 @@
     <Compile Include="AssemblyParser.cs" />
     <Compile Include="BitMask.cs" />
     <Compile Include="DeReader.cs" />
+    <Compile Include="Extension.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
