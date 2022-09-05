@@ -84,16 +84,17 @@ namespace DataDumper
 			for (int i = 0, j = 0; i < fields.Length && j < fields.Length; i++) {
 				var f = fields[i];
 				
+				//var ft = f.FieldType;
+				var ft = f.PropertyType;
+				
 				if (bitmask == null || bitmask.TestBit(j)) {
-					//var ft = f.FieldType;
-					var ft = f.PropertyType;
 					Write("Field (#{0}) {1}, type {2} = ", j, f.Name, ft.Name);	
 					var ret = ParseFieldType(ft, reader);
 					WriteLine();
 					
 					output.Add(string.Format("\"{0}\": {1}", TransformName(f.Name), ret));
 				} else {
-					WriteLine("Skipping field (#{0}) {1}", j, f.Name);
+					WriteLine("Skipping field (#{0}) {1} (type {2})", j, f.Name, ft.Name);
 				}
 				
 				// HACK: two hash fields are treated like one
@@ -218,7 +219,8 @@ namespace DataDumper
 				return "{" + string.Join(",", items) + "}";
 				
 			} else {
-				throw new InvalidOperationException(string.Format("Type {0} is not supported", ft.FullName));
+				//throw new InvalidOperationException(string.Format("Type {0} is not supported", ft.FullName));
+				return ParseDefinition(ft.Resolve(), reader); // TODO!
 			}
 		}
 		
@@ -249,6 +251,10 @@ namespace DataDumper
 		}
 		
 		private bool IsUnsignedCount(TypeReference t) {
+			return true;
+			
+			var tt = t.Resolve();
+			
 			return t.FullName.Equals(typeof(string).FullName) ||
 			    t.FullName.Equals(typeof(uint).FullName) ||
 				t.FullName.Equals(typeof(Int64).FullName) ||
@@ -261,7 +267,7 @@ namespace DataDumper
 			    t.FullName.EndsWith("SimpleSafeUInt32") ||
 				t.FullName.EndsWith("SimpleSafeUInt16") ||
 				t.FullName.EndsWith("SimpleSafeInt32") ||
-				(t.Resolve().IsEnum && !IsEnumSigned(t.Resolve())) ||
+				(tt.IsEnum && !IsEnumSigned(tt)) ||
 				t.IsArray;
 		}
 		
@@ -302,7 +308,7 @@ namespace DataDumper
 			return ret;
 		}
 		
-		private IEnumerable<PropertyReference> RearrangeProperties(IEnumerable<PropertyReference> prior) {
+		private IEnumerable<PropertyReference> _RearrangeProperties(IEnumerable<PropertyReference> prior) {
 			// Fields named "HashSuffix" and "HashPre" come in serialized file in reverse order to specified in assembly
 			var ret = new List<PropertyReference>();
 			
@@ -313,6 +319,41 @@ namespace DataDumper
 					ret.Add(array[i+1]);
 					ret.Add(array[i]);
 					i += 2;
+				} else {
+					ret.Add(array[i]);
+					i++;
+				}
+			}
+			
+			return ret;
+		}
+		
+		private IEnumerable<PropertyReference> RearrangeProperties(IEnumerable<PropertyReference> prior) {
+			// Fields named "HashSuffix" (uint) and "HashPre" (byte) come in serialized file in reverse order to specified in assembly
+			// They are followed by ulong field without setter method
+			var ret = new List<PropertyReference>();
+			
+			var array = prior.ToArray();
+			
+			for (int i = 0; i < array.Length; ) {
+				if (i < array.Length - 2 &&
+				    array[i+0].PropertyType.FullName.Equals(typeof(byte).FullName) &&
+				    array[i+1].PropertyType.FullName.Equals(typeof(uint).FullName) &&
+				    array[i+2].PropertyType.FullName.Equals(typeof(ulong).FullName) &&
+				    array[i+2].Resolve().SetMethod == null
+				   ) {
+					// HACK! Those names are checked in the property loop above
+					if (!array[i+1].Name.EndsWith("HashSuffix")) {
+						array[i+1].Name += "_HashSuffix";
+						array[i].Name += "_HashPre";
+					}
+					
+					ret.Add(array[i+1]);
+					ret.Add(array[i]);
+					i += 3; // Skip ulong
+				} else if (array[i].Resolve().SetMethod == null) {
+					// Skip it
+					i++;
 				} else {
 					ret.Add(array[i]);
 					i++;
@@ -345,7 +386,7 @@ namespace DataDumper
 			var props = new List<PropertyReference>();
 			
 			props.AddRange(
-				t.Properties.Where(p => p.SetMethod != null)
+				t.Properties//.Where(p => p.SetMethod != null)
 			);
 			
 			if (t.BaseType != null)
