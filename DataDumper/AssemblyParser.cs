@@ -471,6 +471,15 @@ namespace DataDumper
 				b.PopBit(11);
 			} else if (classname.Equals("CoopInteractionExcelConfig")) {
 				b.PopBit(1);
+			} else if (classname.Equals("QuestExcelConfig")) {
+				// TODO: purely 3.1+ hack!
+				#if true
+				for (int i = 0; i < 6; i++)
+					b.PopBit(10);
+				
+				for (int i = 0; i < 2; i++)
+					b.PopBit(13);
+				#endif
 			} else if (classname.Equals("GadgetExcelConfig")) {
 				b.PopBit(1);
 				b.PopBit(9);
