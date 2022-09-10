@@ -502,8 +502,7 @@ namespace DataDumper
 				return false;
 			
 			if (td.BaseType.FullName.Equals(typeof(ValueType).FullName) && // It's a struct
-			    //td.CustomAttributes.Any(a => a.AttributeType.FullName.Contains("DebuggerDisplayAttribute")) && // Some unique attribute check?
-			    td.CustomAttributes.Any(a => a.Fields.Any(f => f.Argument.Value.Equals("DebuggerDisplayAttribute"))) &&
+			    td.CustomAttributes.Any(a => a.AttributeType.FullName.Contains("DebuggerDisplayAttribute") || a.Fields.Any(f => f.Argument.Value.Equals("DebuggerDisplayAttribute"))) && // Some unique attribute check?
 			    td.Properties.Count == 1 && // Only one property, value itself
 			    td.Properties[0].PropertyType.Resolve().BaseType.FullName.Equals(typeof(ValueType).FullName) // Property type is uint32 etc
 			   ) {
