@@ -107,6 +107,12 @@ namespace DataDumper
 		}
 		
 		private string ParseFieldType(TypeReference ft, DeReader reader) {
+			string new_name = null;
+
+			if (IsSimpleSafe(ft, out new_name)) {
+				ft.Name = new_name;
+			}
+			
 			if (ft.IsArray) {
 				var arr = ft as ArrayType;
 
@@ -480,6 +486,64 @@ namespace DataDumper
 			} else if (classname.Equals("WeatherExcelConfig")) {
 				b.PopBit(3);
 			} 
+		}
+		
+		// HACK for obfuscated SimpleSafe
+		// (R) ayy lmao
+		private bool IsSimpleSafe(TypeReference t, out string struct_name) {
+			struct_name = null;
+			
+			if (t == null || t.IsArray || t.IsGenericInstance)
+				return false;
+			
+			var td = t.Resolve();
+			
+			if (td.IsEnum)
+				return false;
+			
+			if (td.BaseType.FullName.Equals(typeof(ValueType).FullName) && // It's a struct
+			    //td.CustomAttributes.Any(a => a.AttributeType.FullName.Contains("DebuggerDisplayAttribute")) && // Some unique attribute check?
+			    td.CustomAttributes.Any(a => a.Fields.Any(f => f.Argument.Value.Equals("DebuggerDisplayAttribute"))) &&
+			    td.Properties.Count == 1 && // Only one property, value itself
+			    td.Properties[0].PropertyType.Resolve().BaseType.FullName.Equals(typeof(ValueType).FullName) // Property type is uint32 etc
+			   ) {
+				var underlying_type_name = td.Properties[0].PropertyType.FullName;
+				
+				if (underlying_type_name.Equals(typeof(float).FullName)) {
+					struct_name = "GIO.Stub.SimpleSafeFloat";
+					return true;
+				}
+				if (underlying_type_name.Equals(typeof(double).FullName)) {
+					struct_name = "GIO.Stub.SimpleSafeDouble";
+					return true;
+				}
+				if (underlying_type_name.Equals(typeof(sbyte).FullName)) {
+					struct_name = "GIO.Stub.SimpleSafeInt8";
+					return true;
+				}
+				if (underlying_type_name.Equals(typeof(short).FullName)) {
+					struct_name = "GIO.Stub.SimpleSafeInt16";
+					return true;
+				}
+				if (underlying_type_name.Equals(typeof(int).FullName)) {
+					struct_name = "GIO.Stub.SimpleSafeInt32";
+					return true;
+				}
+				if (underlying_type_name.Equals(typeof(byte).FullName)) {
+					struct_name = "GIO.Stub.SimpleSafeUInt8";
+					return true;
+				}
+				if (underlying_type_name.Equals(typeof(ushort).FullName)) {
+					struct_name = "GIO.Stub.SimpleSafeUInt16";
+					return true;
+				}
+				if (underlying_type_name.Equals(typeof(uint).FullName)) {
+					struct_name = "GIO.Stub.SimpleSafeUInt32";
+					return true;
+				}
+			}
+			
+			return false;
 		}
 	}
 }
